@@ -1,0 +1,440 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>Scalar API Explorer</title>
+		<link type="text/css" rel="stylesheet" href="../../views/modules/dashboot/css/bootstrap.min.css">
+		<link href="css/reset.css" type="text/css" rel="stylesheet" />
+		<link href="css/global.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="../../views/modules/dashboot/js/jquery-3.1.0.min.js"></script>
+		<script type="text/javascript" src="../../views/modules/dashboot/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="js/vkbeautify.0.97.00.beta.js"></script>
+		<script type="text/javascript" src="../../views/widgets/api/scalarapi.js"></script>
+		<script type="text/javascript">
+		
+			var url;
+			var format;
+			var pdf;
+		
+			$(document).ready(function(){
+				window.parent.setupAPIExplorer();
+				selectTab('content');
+			});
+
+			function setBookURL(url) {
+				$('#bookUrl').val(url);
+				updateURL();
+			}
+
+			function selectTab(tabName) {
+				$('#tabs > .btn-group > button').removeClass('btn-primary');
+				$('#'+tabName+'-btn').addClass('btn-primary');
+				$('.pane').hide();
+				$('#'+tabName).show();
+				if (tabName == 'results') {
+					callAPI();
+				}
+			}
+			
+			/**
+			 * Builds the URL for the API call based on the current settings.
+			 */
+			function updateURL() {
+			
+				$( '#search-depth-segment' ).show();
+				$( '#pagination-segment' ).show();
+
+				url = $('#bookUrl').val();
+				
+				url += 'rdf/';
+				
+				switch ($('input:radio[name=content]:checked').val()) {
+				
+					// getting info about the book; nothing to add
+					case 'book':
+					break;
+					
+					// content of a given type; add the type
+					case 'contentOfType':
+					url += 'instancesof/';
+					switch ($('#contentType').val()) {
+					
+						case 'any':
+						url += 'content';
+						break;
+						
+						default:
+						url += $('#contentType').val();
+						break;
+					
+					}
+					break;
+					
+					// a specific url; add the page's id
+					case 'url':
+					var bookUrl = scalarapi.basepath($('#bookUrl').val());
+					if ( bookUrl != '' ) {
+						url += 'node/' + scalarapi.stripVersion(bookUrl);
+					}
+					break;
+					
+					// all of the book's content
+					case 'all':
+					url += 'instancesof/content';
+					$('input:checkbox[name=references]').prop( 'checked', true );
+					$('input:radio[name=pagination]').filter('[value=all]').prop( 'checked', true );
+					$('#searchDepth').val( 1 );
+					$('#relationType').val( 'any' );
+					$( '#search-depth-segment' ).hide();
+					$( '#pagination-segment' ).hide();
+					break;
+				
+				}
+				
+				// store search parameters here
+				var params = [];
+
+				var searchDepth = parseInt($('#searchDepth').val());
+				if ( searchDepth == 0 ) {
+					$( '#relationship-options' ).hide();
+				} else {
+					$( '#relationship-options' ).show();
+				}
+
+				params.push('rec='+searchDepth);
+				
+				if ($('#relationType').val() != 'any') {
+					params.push('res='+$('#relationType').val());
+				}
+				
+				if ( searchDepth > 0 ) {
+					params.push('ref='+($('input:checkbox[name=references]').is(':checked') ? '1' : '0'));
+				}
+				
+				// return versions or not
+				if ($('input:checkbox[name=versions]').is(':checked')) {
+					params.push('versions=1');
+				}
+				
+				// pagination
+				switch ($('input:radio[name=pagination]:checked').val()) {
+				
+					case 'all':
+					break;
+					
+					case 'paginated':
+					params.push('start='+$('#resultStart').val());
+					params.push('results='+$('#resultCount').val());
+					break;
+				
+				}
+				
+				// results format
+				switch ($('#resultsFormat').val()) {
+				
+					case 'json':
+					params.push('format=json');
+					format = 'jsonp';
+					break;
+					
+					case 'xml':
+					format = 'xml';
+					break;
+				
+				}
+				
+				// assemble the parameters
+				if (params.length > 0) {
+					url += '?' + params.join('&');
+				}
+				
+				if (($('#bookUrl').val().split('/')[3] == undefined) || ($('#bookUrl').val().split('/')[4] == undefined)) {
+					url = "Hold it a sec -- did you fill everything out above?"
+				}
+				
+				// update the url for the api call
+				$('#apiUrl').val(url);
+			
+			}
+			
+			/**
+			 * Calls the API with the current URL.
+			 */
+			function callAPI() {
+				
+				updateURL();
+
+				hideWordCountVerification();
+				
+				if (url.indexOf('Hold it a sec') != -1) {
+					alert("Sorry, we weren't able to construct a valid URL. Maybe you forgot something at the top?");
+					
+				} else {
+				
+					$.ajax({
+						type:"GET",
+						url:url,
+						dataType:'text',
+						success:handleSuccess,
+						error:handleError
+					});
+					
+					$('#results-output').val('Retrieving content...');
+					$('#textContent').val('Retrieving content...');
+					$('#textExplanation').hide();
+					
+				}
+				
+			}
+			
+			/**
+			 * Handles a failed API call.
+			 */
+			function handleError(XMLHttpRequest, textStatus, errorThrown) {
+				$('#results').val(textStatus+'\n'+errorThrown);
+			}
+			
+			/**
+			 * Handles a successful API call.
+			 */
+			function handleSuccess(data) {
+
+				console.log(data);
+			
+				switch (format) {
+				
+					case 'jsonp':
+					$('#results-output').val(vkbeautify.json(data, 4));
+					break;
+					
+					case 'xml':
+					$('#results-output').val(vkbeautify.xml(data, 4));
+					break;
+		
+				}
+
+				processText( data );
+				
+			}
+
+			/**
+			 * Processes text results of an API call.
+			 */
+			function processText( data ) {
+
+				//scalarapi.model.parseNodes( data );
+
+				var node, nodeProp, version, content, element, text, title, page, i, url,
+					bookUrl = scalarapi.basepath($('#bookUrl').val());
+					completeHTML = $( '<div/>' ),
+					completeText = '',
+					wordCount = 0,
+					regex = /\s+/gi;
+
+				$( "#for-printing" ).empty();
+
+				completeHTML.append( '<div class="disclaimer">This is an experimental export of content from a book created in <a href="http://scalar.usc.edu">Scalar</a>. Links to media and other content may not function.</div>' )
+			
+				switch (format) {
+				
+					case 'jsonp':
+					var json = JSON.parse( data );
+					for ( var nodeProp in json ) {
+						node = json[ nodeProp ];
+						content = node[ 'http://rdfs.org/sioc/ns#content' ];
+						if ( content != null ) {
+							element = $( '<div>' + content[ 0 ].value + '</div>' );
+							title = node[ 'http://purl.org/dc/terms/title' ][ 0 ].value;
+							text = element.text();
+							url = node[ 'http://purl.org/dc/terms/isVersionOf' ][ 0 ].value;
+							page = $( '<div class="scalar-page"></div>' );
+							page.append( '<h1 class="page-heading">' + title );
+							page.append( '<div class="page-url"><a href="' + url + '">' + url + '</a></div>' );
+							page.append( element );
+							completeHTML.append( page );
+							completeText += title + '\n\n' + text + '\n\n\n';
+							wordCount += text.trim().replace(regex, ' ').split(' ').length;
+						}
+					}
+					break;
+					
+					case 'xml':
+					var xml = $( '<div>' + data + '</div>' );
+					xml.find( 'ov\\:versionnumber' ).each( function() {
+						node = $( this ).parent();
+						title = $( '<div/>' ).html( $( node ).find( 'dcterms\\:title' ).text() ).text();
+						text = $( '<div/>' ).html( $( node ).find( 'sioc\\:content' ).text() ).text();
+						url = $( node ).find( 'dcterms\\:isversionof' ).attr( 'rdf:resource' );
+						page = $( '<div class="scalar-page"></div>' );
+						page.append( '<h1 class="page-heading">' + $( node ).find( 'dcterms\\:title' ).text() + '</h1>' );
+						page.append( '<div class="page-url"><a href="' + url + '">' + url + '</a></div>' );
+						page.append( $( node ).find( 'sioc\\:content' ).text() );
+						completeHTML.append( page );
+						completeText += title + '\n\n' + text + '\n\n\n';
+						wordCount += text.trim().replace(regex, ' ').split(' ').length;
+					})
+					break;
+		
+				}
+
+				$('#textContent').val( completeText );
+				$('#wordCount').text( wordCount );
+				$('#textExplanation').show();
+
+				$( "#for-printing" ).append( completeHTML );
+
+			}
+
+			function printContent() {
+				window.print();
+			}
+
+			function verifyWordCount() {
+				$('#text-results').show();
+			}
+
+			function hideWordCountVerification() {
+				$('#text-results').hide();
+			}
+			
+		</script>
+	</head>
+	<body>
+		<div id="wrapper" class="container-fluid">
+			<div class="row">
+				<div class="well">
+					<h4>Build your query</h4>
+					<div id="tabs" class="btn-group btn-group-justified" role="group" aria-label="api-explorer-steps">
+						<div class="btn-group" role="group">
+							<button id="content-btn" type="button" onclick="javascript:selectTab('content');" class="btn btn-default btn-primary">Content</button>
+						</div>
+						<div class="btn-group" role="group">
+							<button id="scope-btn" type="button" onclick="javascript:selectTab('scope');" class="btn btn-default">Scope</button>
+						</div>
+						<div class="btn-group" role="group">
+							<button id="format-btn" type="button" onclick="javascript:selectTab('format');" class="btn btn-default">Format</button>
+						</div>
+						<div class="btn-group" role="group">
+							<button id="results-btn" type="button" onclick="javascript:selectTab('results');" class="btn btn-default">Results</button>
+						</div>
+					</div>
+
+					<div id="content" class="pane">
+						<h5>What content are you looking for?</h5>						
+						<form>
+							<div class="form-group">
+								<p><input id="bookUrl" type="text" onchange="updateURL()" onkeyup="updateURL()" size="80"/></p>
+									<!--<li><input type="radio" checked="checked" name="content" value="url" onchange="updateURL()"/> The specific content at the URL above</li>-->
+								<div class="radio form-inline">
+									<label><input type="radio" checked="checked" name="content" value="contentOfType" onchange="updateURL()"/> All content of this type: <select id="contentType" class="form-control" onchange="updateURL()">
+										<option value="annotation">Annotation</option>
+										<option value="commentary">Commentary</option>
+										<option value="media">Media</option>
+										<option value="page">Page (all non-media content)</option>
+										<option value="path">Path</option>
+										<option value="reference">Reference</option>
+										<option value="reply">Reply (aka Comment)</option>
+										<option value="review">Review</option>
+										<option value="tag">Tag</option>
+										<option value="any">Any (may be slow)</option>
+									</select></label>
+								</div>
+								<div class="radio">
+									<label><input type="radio" name="content" value="book" onchange="updateURL()"/> General information about the book</label>
+								</div>
+								<div class="radio">
+									<label><input type="radio" name="content" value="all" onchange="updateURL()"/> All of the book's content and relationships (potentially slow, use with care)</label>
+								</div>
+							</div>
+							<div>
+								<button type="button" onclick="javascript:selectTab('scope');" class="btn btn-primary pull-right">Continue</button>
+							</div>
+							<div class="clearfix"></div>
+						</form>
+					</div>
+					
+					<div id="scope" class="pane">
+						<h5>How much content do you want?</h5>
+						<form>
+							<div class="form-group">
+								<div class="radio">
+									<label><input type="radio" checked="checked" name="pagination" value="all" onchange="updateURL()"/> All results</label>
+								</div>
+								<div class="radio form-inline">
+									<label><input type="radio" name="pagination" value="paginated" onchange="updateURL()"/> Return <input id="resultCount" class="form-control" type="text" onchange="updateURL()" onkeyup="updateURL()" size="3" value="10"/> results, starting at index <input id="resultStart" class="form-control" type="text" onchange="updateURL()" onkeyup="updateURL()" size="3" value="0"/></label>
+								</div>
+								<div class="checkbox">
+									<label><input type="checkbox" name="versions" value="versions" onchange="updateURL()"/> Include past versions (slower)</label>
+								</div>
+							
+								<div class="form-inline">
+									<div class="form-group">
+										<label>Return content related by</label>
+										<select id="searchDepth" class="form-control" onchange="updateURL()">
+											<option value="0">0</option>
+											<option value="1">1</option>
+											<option value="2">2</option>
+											<option value="3">3</option>
+											<option value="4">4</option>
+										</select>
+										<label>degree(s) of separation</label>
+									</div>
+								</div>
+
+								<div id="relationship-options">
+									<p>Linked through this type of relationship: <select id="relationType" onchange="updateURL()">
+										<option value="any">Any (slower)</option>
+										<option value="annotation">Annotation</option>
+										<option value="commentary">Commentary</option>
+										<option value="commentary">Media</option>
+										<option value="page">Page</option>
+										<option value="path">Path</option>
+										<option value="reply">Reply (aka comment)</option>
+										<option value="review">Review</option>
+										<option value="tag">Tag</option>
+									</select></p>
+									<p><input type="checkbox" name="references" value="references" onchange="updateURL()"/> Also include media linked from within pages</p>
+								</div>
+							</div>
+							<div class="pull-right">
+								<button type="button" onclick="javascript:selectTab('content');" class="btn btn-default">Back</button> &nbsp; 
+								<button type="button" onclick="javascript:selectTab('format');" class="btn btn-primary">Continue</button>
+							</div>
+							<div class="clearfix"></div>
+						</form>
+					</div>			
+					
+					<div id="format" class="pane">
+						<h5>In what format?</h5>
+						<form class="form-inline">
+							<div class="form-group">
+								<p><select id="resultsFormat" class="form-control" onchange="updateURL()">
+									<option value="json">RDF-JSON</option>
+									<option value="xml">RDF-XML</option>
+								</select></p>
+							</div>
+							<div class="clearfix"></div>
+							<div class="pull-right">
+								<button type="button" onclick="javascript:selectTab('scope');" class="btn btn-default">Back</button> &nbsp; 
+								<button type="button" onclick="javascript:selectTab('results');" class="btn btn-primary">Continue</button>
+							</div>
+							<div class="clearfix"></div>
+						</form>
+					</div>
+
+					<div id="results" class="pane">
+						<h5>Query</h5>
+						<p><input id="apiUrl" type="text" class="form-control" size="60"/></p>
+						<h5>Results</h5>
+						<textarea id="results-output" class="form-control"></textarea>
+						<div class="inline-button">Approximate word count in this query: <span id="wordCount"></span><span class="pull-right"><button type="button" onclick="javascript:verifyWordCount();" class="btn btn-default">Verify word count</button> &nbsp; <button type="button" onclick="javascript:printContent();" class="btn btn-default">Print text (experimental)</button></span></div>
+						<div id="text-results">
+							<p>To verify accuracy of word count, scroll through the text below to confirm that it does not include extraneous code or markup. Titles are not included in word count.</p>
+							<textarea id="textContent"></textarea>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="for-printing"></div>
+	</body>
+</html>
