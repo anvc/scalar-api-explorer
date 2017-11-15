@@ -28,6 +28,7 @@
 			});
 
 			function setBookURL(url) {
+				if ('/' != url.substr(url.length-1)) url += '/';
 				$('#bookUrl').val(url);
 				updateURL();
 			}
