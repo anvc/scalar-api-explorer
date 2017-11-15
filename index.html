@@ -15,8 +15,15 @@
 			var format;
 			var pdf;
 		
+			// Load a book with ?book_url=http://my-book/url
+			
 			$(document).ready(function(){
-				window.parent.setupAPIExplorer();
+				if (-1 != document.location.href.indexOf('book_url=')) {
+					var book_url = document.location.href.substr(document.location.href.indexOf('book_url=')+9);
+					if (-1 != book_url.indexOf('&')) book_url = book_url.substr(0, book_url.indexOf('&'));
+					if (-1 != book_url.indexOf('#')) book_url = book_url.substr(0, book_url.indexOf('#'));
+					setBookURL(book_url);
+				}
 				selectTab('content');
 			});
 
