@@ -329,11 +329,12 @@
 					<div id="content" class="pane">
 						<h5>What content are you looking for?</h5>						
 						<form>
-							<div class="form-group">
+							<div class="form-group form-inline">
 								<p><input id="bookUrl" type="text" onchange="updateURL()" onkeyup="updateURL()" size="80"/></p>
 									<!--<li><input type="radio" checked="checked" name="content" value="url" onchange="updateURL()"/> The specific content at the URL above</li>-->
-								<div class="radio form-inline">
-									<label><input type="radio" checked="checked" name="content" value="contentOfType" onchange="updateURL()"/> All content of this type: <select id="contentType" class="form-control" onchange="updateURL()">
+								<div class="radio">
+									<label><input type="radio" checked="checked" name="content" value="contentOfType" onchange="updateURL()"/> All content of this type: </label>
+									<select id="contentType" class="form-control" onchange="updateURL()">
 										<option value="annotation">Annotation</option>
 										<option value="commentary">Commentary</option>
 										<option value="media">Media</option>
@@ -344,7 +345,7 @@
 										<option value="review">Review</option>
 										<option value="tag">Tag</option>
 										<option value="any">Any (may be slow)</option>
-									</select></label>
+									</select>
 								</div>
 								<div class="radio">
 									<label><input type="radio" name="content" value="book" onchange="updateURL()"/> General information about the book</label>

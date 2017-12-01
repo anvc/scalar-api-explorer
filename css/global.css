@@ -113,6 +113,14 @@
 
 }
 
+@media (min-width:400px) {
+    .form-inline .form-control {
+        display: inline-block;
+        width: auto;
+        vertical-align: middle
+    }
+}
+
 @media print {
 
 	#wrapper { display: none; }
