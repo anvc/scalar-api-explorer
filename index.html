@@ -81,7 +81,7 @@
 					case 'url':
 					var bookUrl = scalarapi.basepath($('#bookUrl').val());
 					if ( bookUrl != '' ) {
-						url += 'node/' + scalarapi.stripVersion(bookUrl);
+						url += 'node/' + scalarapi.stripEditionAndVersion(bookUrl);
 					}
 					break;
 					
