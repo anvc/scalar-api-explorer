@@ -10,13 +10,13 @@
 		<script type="text/javascript" src="js/vkbeautify.0.97.00.beta.js"></script>
 		<script type="text/javascript" src="../../views/widgets/api/scalarapi.js"></script>
 		<script type="text/javascript">
-		
+
 			var url;
 			var format;
 			var pdf;
-		
+
 			// Load a book with ?book_url=http://my-book/url
-			
+
 			$(document).ready(function(){
 				if (-1 != document.location.href.indexOf('book_url=')) {
 					var book_url = document.location.href.substr(document.location.href.indexOf('book_url=')+9);
@@ -42,41 +42,41 @@
 					callAPI();
 				}
 			}
-			
+
 			/**
 			 * Builds the URL for the API call based on the current settings.
 			 */
 			function updateURL() {
-			
+
 				$( '#search-depth-segment' ).show();
 				$( '#pagination-segment' ).show();
 
 				url = $('#bookUrl').val();
-				
+
 				url += 'rdf/';
-				
+
 				switch ($('input:radio[name=content]:checked').val()) {
-				
+
 					// getting info about the book; nothing to add
 					case 'book':
 					break;
-					
+
 					// content of a given type; add the type
 					case 'contentOfType':
 					url += 'instancesof/';
 					switch ($('#contentType').val()) {
-					
+
 						case 'any':
 						url += 'content';
 						break;
-						
+
 						default:
 						url += $('#contentType').val();
 						break;
-					
+
 					}
 					break;
-					
+
 					// a specific url; add the page's id
 					case 'url':
 					var bookUrl = scalarapi.basepath($('#bookUrl').val());
@@ -84,7 +84,7 @@
 						url += 'node/' + scalarapi.stripEditionAndVersion(bookUrl);
 					}
 					break;
-					
+
 					// all of the book's content
 					case 'all':
 					url += 'instancesof/content';
@@ -95,9 +95,9 @@
 					$( '#search-depth-segment' ).hide();
 					$( '#pagination-segment' ).hide();
 					break;
-				
+
 				}
-				
+
 				// store search parameters here
 				var params = [];
 
@@ -109,75 +109,75 @@
 				}
 
 				params.push('rec='+searchDepth);
-				
+
 				if ($('#relationType').val() != 'any') {
 					params.push('res='+$('#relationType').val());
 				}
-				
+
 				if ( searchDepth > 0 ) {
 					params.push('ref='+($('input:checkbox[name=references]').is(':checked') ? '1' : '0'));
 				}
-				
+
 				// return versions or not
 				if ($('input:checkbox[name=versions]').is(':checked')) {
 					params.push('versions=1');
 				}
-				
+
 				// pagination
 				switch ($('input:radio[name=pagination]:checked').val()) {
-				
+
 					case 'all':
 					break;
-					
+
 					case 'paginated':
 					params.push('start='+$('#resultStart').val());
 					params.push('results='+$('#resultCount').val());
 					break;
-				
+
 				}
-				
+
 				// results format
 				switch ($('#resultsFormat').val()) {
-				
+
 					case 'json':
 					params.push('format=json');
 					format = 'jsonp';
 					break;
-					
+
 					case 'xml':
 					format = 'xml';
 					break;
-				
+
 				}
-				
+
 				// assemble the parameters
 				if (params.length > 0) {
 					url += '?' + params.join('&');
 				}
-				
+
 				if (($('#bookUrl').val().split('/')[3] == undefined) || ($('#bookUrl').val().split('/')[4] == undefined)) {
 					url = "Hold it a sec -- did you fill everything out above?"
 				}
-				
+
 				// update the url for the api call
 				$('#apiUrl').val(url);
-			
+
 			}
-			
+
 			/**
 			 * Calls the API with the current URL.
 			 */
 			function callAPI() {
-				
+
 				updateURL();
 
 				hideWordCountVerification();
-				
+
 				if (url.indexOf('Hold it a sec') != -1) {
 					alert("Sorry, we weren't able to construct a valid URL. Maybe you forgot something at the top?");
-					
+
 				} else {
-				
+
 					$.ajax({
 						type:"GET",
 						url:url,
@@ -185,43 +185,43 @@
 						success:handleSuccess,
 						error:handleError
 					});
-					
+
 					$('#results-output').val('Retrieving content...');
 					$('#textContent').val('Retrieving content...');
 					$('#textExplanation').hide();
-					
+
 				}
-				
+
 			}
-			
+
 			/**
 			 * Handles a failed API call.
 			 */
 			function handleError(XMLHttpRequest, textStatus, errorThrown) {
 				$('#results').val(textStatus+'\n'+errorThrown);
 			}
-			
+
 			/**
 			 * Handles a successful API call.
 			 */
 			function handleSuccess(data) {
 
 				console.log(data);
-			
+
 				switch (format) {
-				
+
 					case 'jsonp':
 					$('#results-output').val(vkbeautify.json(data, 4));
 					break;
-					
+
 					case 'xml':
 					$('#results-output').val(vkbeautify.xml(data, 4));
 					break;
-		
+
 				}
 
 				processText( data );
-				
+
 			}
 
 			/**
@@ -241,9 +241,9 @@
 				$( "#for-printing" ).empty();
 
 				completeHTML.append( '<div class="disclaimer">This is an experimental export of content from a book created in <a href="http://scalar.usc.edu">Scalar</a>. Links to media and other content may not function.</div>' )
-			
+
 				switch (format) {
-				
+
 					case 'jsonp':
 					var json = JSON.parse( data );
 					for ( var nodeProp in json ) {
@@ -264,7 +264,7 @@
 						}
 					}
 					break;
-					
+
 					case 'xml':
 					var xml = $( '<div>' + data + '</div>' );
 					xml.find( 'ov\\:versionnumber' ).each( function() {
@@ -281,7 +281,7 @@
 						wordCount += text.trim().replace(regex, ' ').split(' ').length;
 					})
 					break;
-		
+
 				}
 
 				$('#textContent').val( completeText );
@@ -303,7 +303,7 @@
 			function hideWordCountVerification() {
 				$('#text-results').hide();
 			}
-			
+
 		</script>
 	</head>
 	<body>
@@ -327,7 +327,7 @@
 					</div>
 
 					<div id="content" class="pane">
-						<h5>What content are you looking for?</h5>						
+						<h5>What content are you looking for?</h5>
 						<form>
 							<div class="form-group form-inline">
 								<p><input id="bookUrl" type="text" onchange="updateURL()" onkeyup="updateURL()" size="80"/></p>
@@ -360,7 +360,7 @@
 							<div class="clearfix"></div>
 						</form>
 					</div>
-					
+
 					<div id="scope" class="pane">
 						<h5>How much content do you want?</h5>
 						<form>
@@ -374,9 +374,9 @@
 								<div class="checkbox">
 									<label><input type="checkbox" name="versions" value="versions" onchange="updateURL()"/> Include past versions (slower)</label>
 								</div>
-							
+
 								<div class="form-inline">
-									<div class="form-group">
+									<div class="form-group" style="margin-left: 0;">
 										<label>Return content related by</label>
 										<select id="searchDepth" class="form-control" onchange="updateURL()">
 											<option value="0">0</option>
@@ -405,13 +405,13 @@
 								</div>
 							</div>
 							<div class="pull-right">
-								<button type="button" onclick="javascript:selectTab('content');" class="btn btn-default">Back</button> &nbsp; 
+								<button type="button" onclick="javascript:selectTab('content');" class="btn btn-default">Back</button> &nbsp;
 								<button type="button" onclick="javascript:selectTab('format');" class="btn btn-primary">Continue</button>
 							</div>
 							<div class="clearfix"></div>
 						</form>
-					</div>			
-					
+					</div>
+
 					<div id="format" class="pane">
 						<h5>In what format?</h5>
 						<form class="form-inline">
@@ -423,7 +423,7 @@
 							</div>
 							<div class="clearfix"></div>
 							<div class="pull-right">
-								<button type="button" onclick="javascript:selectTab('scope');" class="btn btn-default">Back</button> &nbsp; 
+								<button type="button" onclick="javascript:selectTab('scope');" class="btn btn-default">Back</button> &nbsp;
 								<button type="button" onclick="javascript:selectTab('results');" class="btn btn-primary">Continue</button>
 							</div>
 							<div class="clearfix"></div>

@@ -32,7 +32,7 @@
 
 	a {
 		text-decoration: none;
-		color: 
+		color:
 		#026697;
 	}
 
@@ -48,7 +48,7 @@
 
 	.well { color: #686868; }
 
-	.form-group { margin-left: 20px; }
+	.form-group { margin-left: 0; }
 	.checkbox, .radio { margin-top: 20px; margin-bottom: 20px; }
 	.form-inline.radio input[type=radio] { margin-top: 10px; }
 	.inline-button { line-height: 40px; }
@@ -88,14 +88,14 @@
 		margin-left: 15px;
 	}
 
-	.explanation ul { 
+	.explanation ul {
 		margin: 10px 0 20px 0;
 		font-size: 16px;
 		line-height: 120%;
 	}
 
-	.explanation li { 
-		list-style-type: circle; 
+	.explanation li {
+		list-style-type: circle;
 		margin-left: 30px;
 		margin-bottom: 10px;
 	}
@@ -125,7 +125,7 @@
 
 	#wrapper { display: none; }
 
-	/* Fonts 
+	/* Fonts
 	.heading_font { font-family: 'Lato', Arial, sans-serif !important; }
 	.heading_font b, .heading_font strong { font-weight: 900; }
 	.heading_weight { font-weight: 900; }
